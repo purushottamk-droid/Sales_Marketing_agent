@@ -48,6 +48,13 @@ MCP_SALESFORCE_SERVER_URL = os.environ.get(
 _mcp_url_parts = urlsplit(MCP_SALESFORCE_SERVER_URL)
 MCP_SALESFORCE_SERVER_BASE_URL = f"{_mcp_url_parts.scheme}://{_mcp_url_parts.netloc}"
 
+# Service account authorized (roles/run.invoker) to call the Salesforce MCP Cloud
+# Run service. Human callers need roles/iam.serviceAccountTokenCreator on it to
+# impersonate their way to a valid identity token.
+MCP_INVOKER_SERVICE_ACCOUNT = os.environ.get(
+    "MCP_INVOKER_SERVICE_ACCOUNT", "621913909275-compute@developer.gserviceaccount.com"
+)
+
 MCP_CONCURRENCY_LIMIT = 5
 _mcp_semaphore = asyncio.Semaphore(MCP_CONCURRENCY_LIMIT)
 
@@ -60,7 +67,15 @@ async def _get_gcp_identity_token(audience: str) -> str:
     """Fetch GCP identity token locally via gcloud or fallback smoothly."""
     def _fetch():
         try:
-            cmd = f'gcloud auth print-identity-token --audiences="{audience}"'
+            # Human user accounts can't mint a custom-audience ID token directly —
+            # gcloud requires impersonating a service account that's an authorized
+            # invoker on the Cloud Run service (roles/run.invoker) and that the
+            # caller has roles/iam.serviceAccountTokenCreator on.
+            impersonate_flag = (
+                f'--impersonate-service-account="{MCP_INVOKER_SERVICE_ACCOUNT}" '
+                if MCP_INVOKER_SERVICE_ACCOUNT else ""
+            )
+            cmd = f'gcloud auth print-identity-token {impersonate_flag}--audiences="{audience}"'
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
             token = result.stdout.strip()
             if result.returncode == 0 and token:
