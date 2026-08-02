@@ -1,0 +1,5 @@
+mcp[cli]>=1.27,<2
+httpx>=0.27,<1
+PyJWT>=2.8,<3
+cryptography>=42,<47
+python-dotenv>=1.0,<2
