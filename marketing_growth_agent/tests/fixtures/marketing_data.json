@@ -1,0 +1,67 @@
+{
+  "account_id": "demo-marketing-account",
+  "period": "2026-Q3",
+  "pipeline_target": 1500000,
+  "campaigns": [
+    {
+      "campaign_id": "gads-001",
+      "platform": "google_ads",
+      "campaign_name": "Enterprise Search",
+      "spend": 25000,
+      "budget": 30000,
+      "impressions": 800000,
+      "clicks": 24000,
+      "conversions": 220,
+      "qualified_leads": 110,
+      "opportunities": 30,
+      "pipeline_value": 600000,
+      "revenue": 180000,
+      "target_cpl": 150,
+      "frequency": 2.1,
+      "previous_ctr": 3.2,
+      "audience_segments": [
+        {"name": "Enterprise finance leaders", "qualified_leads": 62, "opportunities": 21}
+      ]
+    },
+    {
+      "campaign_id": "linkedin-002",
+      "platform": "linkedin_ads",
+      "campaign_name": "Finance Leader ABM",
+      "spend": 32000,
+      "budget": 35000,
+      "impressions": 420000,
+      "clicks": 6300,
+      "conversions": 105,
+      "qualified_leads": 42,
+      "opportunities": 9,
+      "pipeline_value": 225000,
+      "revenue": 45000,
+      "target_cpl": 240,
+      "frequency": 4.2,
+      "previous_ctr": 2.1,
+      "audience_segments": [
+        {"name": "Mid-market finance leaders", "qualified_leads": 12, "opportunities": 2}
+      ]
+    },
+    {
+      "campaign_id": "msads-003",
+      "platform": "microsoft_ads",
+      "campaign_name": "Competitor Search",
+      "spend": 12000,
+      "budget": 18000,
+      "impressions": 260000,
+      "clicks": 7800,
+      "conversions": 95,
+      "qualified_leads": 50,
+      "opportunities": 14,
+      "pipeline_value": 310000,
+      "revenue": 80000,
+      "target_cpl": 145,
+      "frequency": 1.8,
+      "previous_ctr": 3.0,
+      "audience_segments": [
+        {"name": "Competitor evaluators", "qualified_leads": 31, "opportunities": 10}
+      ]
+    }
+  ]
+}

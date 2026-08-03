@@ -1,0 +1,59 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+env.yaml
+
+# Google OAuth / Credentials
+credentials.json
+gmail_token.json
+*_gmail_token.json
+token.json
+oauth*.json
+
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build & distribution
+build/
+dist/
+*.egg-info/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Logs
+*.log
+
+# Local database files
+*.sqlite3
+*.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Temporary files
+*.tmp
+*.swp
+
+# Run output logs (project-specific, generated locally during debugging)
+run_output.log
+run_output2.log
