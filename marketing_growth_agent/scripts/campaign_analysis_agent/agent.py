@@ -2,7 +2,7 @@ from google.adk.agents import LlmAgent
 
 from .output_schema import CampaignAnalysisResult
 from .prompt import CAMPAIGN_ANALYSIS_PROMPT
-
+from google.genai import types
 
 campaign_analysis_agent = LlmAgent(
     name="campaign_analysis_agent",
@@ -11,4 +11,7 @@ campaign_analysis_agent = LlmAgent(
     output_schema=CampaignAnalysisResult,
     output_key="campaign_analysis_results",
     include_contents="none",
+    generate_content_config=types.GenerateContentConfig(
+        max_output_tokens=65536,
+    ),
 )

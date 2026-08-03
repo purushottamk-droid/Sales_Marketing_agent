@@ -200,6 +200,137 @@
 #     return notifications
 
 
+# import base64
+# from email.mime.text import MIMEText
+# from typing import Any, Dict, Optional
+# from marketing_growth_agent.app_auth.auth import build_gmail_service
+
+# from google.adk.tools import FunctionTool, ToolContext
+
+
+# def _build_mime_email(to: str, subject: str, body_html: str) -> str:
+#     message = MIMEText(body_html, "html", "utf-8")
+#     message["To"] = to
+#     message["Subject"] = subject
+#     return base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
+
+
+# # ---------------------------------------------------------------------
+# # TOOL 1 — Notify manager (portfolio summary only)
+# # ---------------------------------------------------------------------
+
+# async def notify_manager(
+#     manager_email: str,
+#     portfolio_summary_html: str,
+#     tool_context: ToolContext,
+# ) -> dict:
+#     """Send ONE email to the manager: critical-health campaigns, then an
+#     overall channel summary, then next steps and an executive summary.
+
+#     portfolio_summary_html must be pre-formatted by the prompt layer, in
+#     this order:
+#       1. One block per campaign with campaign_health == "critical" only
+#          (from campaign_analysis_results), each containing ONLY
+#          campaign_name, campaign_id, platform, campaign_health,
+#          efficiency_score, recommended_action, and analysis_summary.
+#       2. An "Overall Channel Summary" section (from
+#          growth_assessment_result.channel_efficiency), showing ONLY
+#          channel, lead_to_opportunity_rate, and quality_assessment per
+#          channel, in that exact order.
+#       3. A "Recommended Next Steps" section (from growth_assessment_result
+#          .recommended_next_steps), as a bullet list.
+#       4. An "Executive Summary" section (from growth_assessment_result
+#          .executive_summary).
+
+#     No growth_potential, high_intent_segments, performance_issues,
+#     monthly performance data, cpl, cpo, ctr, cpc, or
+#     lead_to_opportunity_rate belongs in this email.
+
+#     manager_email MUST come from session state — never invented or guessed.
+#     """
+#     subject = "Marketing Growth Portfolio Summary"
+#     body_html = f"""
+#     <html><body style="font-family:Arial,sans-serif;color:#243447">
+#       <h2>Marketing Growth Portfolio Brief</h2>
+#       {portfolio_summary_html}
+#     </body></html>
+#     """
+#     try:
+#         service = build_gmail_service()
+#         raw = _build_mime_email(manager_email, subject, body_html)
+#         sent = service.users().messages().send(userId="me", body={"raw": raw}).execute()
+#         return {
+#             "status": "SENT", "type": "notify_manager",
+#             "manager_email": manager_email, "message_id": sent.get("id"),
+#         }
+#     except Exception as e:
+#         return {
+#             "status": "ERROR", "type": "notify_manager",
+#             "manager_email": manager_email, "error_message": str(e),
+#         }
+
+
+# # ---------------------------------------------------------------------
+# # TOOL 2 — Notify report recipient (per-campaign detail only)
+# # ---------------------------------------------------------------------
+
+# async def notify_report(
+#     report_email: str,
+#     campaigns_summary_html: str,
+#     tool_context: ToolContext,
+# ) -> dict:
+#     """Send ONE consolidated email with one block PER campaign to the report recipient.
+
+#     campaigns_summary_html must be pre-formatted by the prompt layer. For
+#     EACH campaign_id, in this exact order:
+#       1. Header: campaign_name, bold/highlighted, followed by campaign_id
+#          in parentheses (plain text).
+#       2. Analysis fields (from campaign_analysis_results), bold labels:
+#          platform, campaign_health, efficiency_score, growth_potential,
+#          high_intent_segments, performance_issues.
+#       3. A "Recent Month Statistics" section title (distinctly colored),
+#          followed by exactly ONE row — the latest available month for
+#          that campaign_id (from marketing_payload.monthly_performance):
+#          year_month, spend, clicks, impressions, ad_conversions,
+#          sf_leads, sf_opportunities, salesforce_attribution_method — all
+#          with bold field labels.
+#       4. Recommended_action, then analysis_summary — both with bold
+#          labels, placed AFTER the Recent Month Statistics section.
+
+#     Repeat this full block for every campaign_id, all in one email, in
+#     the order the campaigns were given, preserving this exact section
+#     order. No other fields, and no growth_assessment_result data
+#     (recommendation, forecasted_roi, budget_recommendations), belong in
+#     this email.
+
+#     report_email MUST come from session state — never invented or guessed.
+#     """
+#     subject = "Marketing Growth Campaign Action Report"
+#     body_html = f"""
+#     <html><body style="font-family:Arial,sans-serif;color:#243447">
+#       <h2>Marketing Growth — Campaign Action Report</h2>
+#       {campaigns_summary_html}
+#     </body></html>
+#     """
+#     try:
+#         service = build_gmail_service()
+#         raw = _build_mime_email(report_email, subject, body_html)
+#         sent = service.users().messages().send(userId="me", body={"raw": raw}).execute()
+#         return {
+#             "status": "SENT", "type": "notify_report",
+#             "report_email": report_email, "message_id": sent.get("id"),
+#         }
+#     except Exception as e:
+#         return {
+#             "status": "ERROR", "type": "notify_report",
+#             "report_email": report_email, "error_message": str(e),
+#         }
+
+
+# notify_manager_tool = FunctionTool(func=notify_manager)
+# notify_report_tool = FunctionTool(func=notify_report)
+
+
 import base64
 from email.mime.text import MIMEText
 from typing import Any, Dict, Optional
@@ -215,60 +346,162 @@ def _build_mime_email(to: str, subject: str, body_html: str) -> str:
     return base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
 
 
+
+import html as html_module
+
+
+def _manager_email_html(data: Dict[str, Any]) -> str:
+    campaigns_manager = data.get("campaigns_manager", [])
+    channel_summary = data.get("channel_summary", [])
+    recommended_next_steps = data.get("recommended_next_steps", [])
+    executive_summary = data.get("executive_summary", "")
+
+    campaign_blocks = ""
+    for c in campaigns_manager:
+        campaign_blocks += f"""
+        <div style="margin-bottom:16px;">
+          <span style="color:#2980b9; font-weight:bold;">{html_module.escape(str(c.get('campaign_name', '')))}</span>
+          {html_module.escape(str(c.get('campaign_id', '')))}<br>
+          <b>Platform:</b> {html_module.escape(str(c.get('platform', '')))}<br>
+          <b>Campaign Health:</b> {html_module.escape(str(c.get('campaign_health', '')))}<br>
+          <b>Efficiency Score:</b> {html_module.escape(str(c.get('efficiency_score', '')))}<br>
+          <b>Recommended Action:</b> {html_module.escape(str(c.get('recommended_action', '')))}<br>
+          <b>Analysis Summary:</b> {html_module.escape(str(c.get('analysis_summary', '')))}
+        </div>
+        """
+
+    channel_blocks = ""
+    for ch in channel_summary:
+        channel_blocks += f"""
+        <div style="margin-bottom:12px;">
+          <span style="color:#8e44ad; font-weight:bold;">{html_module.escape(str(ch.get('channel', '')))}</span><br>
+          <b>Lead-to-Opportunity Rate:</b> {ch.get('lead_to_opportunity_rate', '')}<br>
+          <b>Quality Assessment:</b> {html_module.escape(str(ch.get('quality_assessment', '')))}
+        </div>
+        """
+
+    next_steps_html = "".join(
+        f"<li>{html_module.escape(str(step))}</li>" for step in recommended_next_steps
+    )
+
+    return f"""
+    {campaign_blocks}
+    <h3><span style="color:#16a085; font-weight:bold;">Overall Channel Summary</span></h3>
+    {channel_blocks}
+    <h3><span style="color:#e67e22; font-weight:bold;">Recommended Next Steps</span></h3>
+    <ul>{next_steps_html}</ul>
+    <h3><span style="color:#2c3e50; font-weight:bold;">Executive Summary</span></h3>
+    <p>{html_module.escape(str(executive_summary))}</p>
+    """
+
+
+def _report_email_html(data: Dict[str, Any]) -> str:
+    campaigns_full = data.get("campaigns_full", [])
+
+    blocks = ""
+    for c in campaigns_full:
+        segments = c.get("high_intent_segments", [])
+        segments_str = ", ".join(
+            html_module.escape(str(s.get("segment", s) if isinstance(s, dict) else s))
+            for s in segments
+        ) or "None identified"
+
+        issues = c.get("performance_issues", [])
+        issues_html = "".join(
+            f"<li>{html_module.escape(str(i))}</li>" for i in issues
+        )
+
+        m = c.get("latest_monthly_performance")
+        if m:
+            monthly_html = f"""
+            <b>Year-Month:</b> {html_module.escape(str(m.get('year_month', '')))}<br>
+            <b>Spend:</b> {m.get('spend', '')}<br>
+            <b>Clicks:</b> {m.get('clicks', '')}<br>
+            <b>Impressions:</b> {m.get('impressions', '')}<br>
+            <b>Ad Conversions:</b> {m.get('ad_conversions', '')}<br>
+            <b>SF Leads:</b> {m.get('sf_leads', '')}<br>
+            <b>SF Opportunities:</b> {m.get('sf_opportunities', '')}<br>
+            <b>Salesforce Attribution Method:</b> {html_module.escape(str(m.get('salesforce_attribution_method', '')))}
+            """
+        else:
+            monthly_html = "No monthly data available."
+
+        blocks += f"""
+        <div style="border:1px solid #ddd;border-radius:6px;padding:14px;margin-bottom:16px;">
+          <span style="color:#2980b9; font-weight:bold;">{html_module.escape(str(c.get('campaign_name', '')))}</span>
+          ({html_module.escape(str(c.get('campaign_id', '')))})<br>
+          <b>Platform:</b> {html_module.escape(str(c.get('platform', '')))}<br>
+          <b>Campaign Health:</b> {html_module.escape(str(c.get('campaign_health', '')))}<br>
+          <b>Efficiency Score:</b> {html_module.escape(str(c.get('efficiency_score', '')))}<br>
+          <b>Growth Potential:</b> {html_module.escape(str(c.get('growth_potential', '')))}<br>
+          <b>High-Intent Segments:</b> {segments_str}<br>
+          <b>Performance Issues:</b>
+          <ul>{issues_html}</ul>
+          <h4><span style="color:#16a085; font-weight:bold;">Recent Month Statistics</span></h4>
+          {monthly_html}<br>
+          <b>Recommended Action:</b> {html_module.escape(str(c.get('recommended_action', '')))}<br>
+          <b>Analysis Summary:</b> {html_module.escape(str(c.get('analysis_summary', '')))}
+        </div>
+        """
+
+    return blocks or "<p>No campaign data available.</p>"
+
+
+
 # ---------------------------------------------------------------------
 # TOOL 1 — Notify manager (portfolio summary only)
 # ---------------------------------------------------------------------
 
 async def notify_manager(
     manager_email: str,
-    portfolio_summary_html: str,
     tool_context: ToolContext,
 ) -> dict:
-    """Send ONE email to the manager: critical-health campaigns, then an
-    overall channel summary, then next steps and an executive summary.
+    """Send ONE email to the manager, built entirely from session state."""
+    state = tool_context.state
+    assessment = state.get("growth_assessment_result", {}) or {}
+    analyses = state.get("campaign_analysis_results", {}) or {}
+    analysis_campaigns = analyses.get("campaigns", [])
 
-    portfolio_summary_html must be pre-formatted by the prompt layer, in
-    this order:
-      1. One block per campaign with campaign_health == "critical" only
-         (from campaign_analysis_results), each containing ONLY
-         campaign_name, campaign_id, platform, campaign_health,
-         efficiency_score, recommended_action, and analysis_summary.
-      2. An "Overall Channel Summary" section (from
-         growth_assessment_result.channel_efficiency), showing ONLY
-         channel, lead_to_opportunity_rate, and quality_assessment per
-         channel, in that exact order.
-      3. A "Recommended Next Steps" section (from growth_assessment_result
-         .recommended_next_steps), as a bullet list.
-      4. An "Executive Summary" section (from growth_assessment_result
-         .executive_summary).
+    manager_data = {
+        "campaigns_manager": [
+            {
+                "campaign_id": c.get("campaign_id"),
+                "campaign_name": c.get("campaign_name"),
+                "platform": c.get("platform"),
+                "campaign_health": c.get("campaign_health"),
+                "efficiency_score": c.get("efficiency_score"),
+                "recommended_action": c.get("recommended_action"),
+                "analysis_summary": c.get("analysis_summary"),
+            }
+            for c in analysis_campaigns
+            if c.get("campaign_health") == "critical"
+        ],
+        "channel_summary": [
+            {
+                "channel": ch.get("channel"),
+                "lead_to_opportunity_rate": ch.get("lead_to_opportunity_rate"),
+                "quality_assessment": ch.get("quality_assessment"),
+            }
+            for ch in assessment.get("channel_efficiency", [])
+        ],
+        "recommended_next_steps": assessment.get("recommended_next_steps", []),
+        "executive_summary": assessment.get("executive_summary", ""),
+    }
 
-    No growth_potential, high_intent_segments, performance_issues,
-    monthly performance data, cpl, cpo, ctr, cpc, or
-    lead_to_opportunity_rate belongs in this email.
-
-    manager_email MUST come from session state — never invented or guessed.
-    """
     subject = "Marketing Growth Portfolio Summary"
     body_html = f"""
     <html><body style="font-family:Arial,sans-serif;color:#243447">
       <h2>Marketing Growth Portfolio Brief</h2>
-      {portfolio_summary_html}
+      {_manager_email_html(manager_data)}
     </body></html>
     """
     try:
         service = build_gmail_service()
         raw = _build_mime_email(manager_email, subject, body_html)
         sent = service.users().messages().send(userId="me", body={"raw": raw}).execute()
-        return {
-            "status": "SENT", "type": "notify_manager",
-            "manager_email": manager_email, "message_id": sent.get("id"),
-        }
+        return {"status": "SENT", "type": "notify_manager", "manager_email": manager_email, "message_id": sent.get("id")}
     except Exception as e:
-        return {
-            "status": "ERROR", "type": "notify_manager",
-            "manager_email": manager_email, "error_message": str(e),
-        }
-
+        return {"status": "ERROR", "type": "notify_manager", "manager_email": manager_email, "error_message": str(e)}
 
 # ---------------------------------------------------------------------
 # TOOL 2 — Notify report recipient (per-campaign detail only)
@@ -276,56 +509,66 @@ async def notify_manager(
 
 async def notify_report(
     report_email: str,
-    campaigns_summary_html: str,
     tool_context: ToolContext,
 ) -> dict:
-    """Send ONE consolidated email with one block PER campaign to the report recipient.
+    """Send ONE consolidated email with one block per campaign, built
+    entirely from session state."""
+    state = tool_context.state
+    analyses = state.get("campaign_analysis_results", {}) or {}
+    payload = state.get("marketing_payload", {}) or {}
+    analysis_campaigns = analyses.get("campaigns", [])
+    monthly_performance = payload.get("monthly_performance", [])
 
-    campaigns_summary_html must be pre-formatted by the prompt layer. For
-    EACH campaign_id, in this exact order:
-      1. Header: campaign_name, bold/highlighted, followed by campaign_id
-         in parentheses (plain text).
-      2. Analysis fields (from campaign_analysis_results), bold labels:
-         platform, campaign_health, efficiency_score, growth_potential,
-         high_intent_segments, performance_issues.
-      3. A "Recent Month Statistics" section title (distinctly colored),
-         followed by exactly ONE row — the latest available month for
-         that campaign_id (from marketing_payload.monthly_performance):
-         year_month, spend, clicks, impressions, ad_conversions,
-         sf_leads, sf_opportunities, salesforce_attribution_method — all
-         with bold field labels.
-      4. Recommended_action, then analysis_summary — both with bold
-         labels, placed AFTER the Recent Month Statistics section.
+    latest_monthly_by_campaign_id = {}
+    for m in monthly_performance:
+        campaign_id = m.get("campaign_id")
+        year_month = m.get("year_month") or ""
+        existing = latest_monthly_by_campaign_id.get(campaign_id)
+        if existing is None or year_month > existing.get("year_month", ""):
+            latest_monthly_by_campaign_id[campaign_id] = {
+                "year_month": year_month,
+                "spend": m.get("spend"),
+                "clicks": m.get("clicks"),
+                "impressions": m.get("impressions"),
+                "ad_conversions": m.get("ad_conversions"),
+                "sf_leads": m.get("sf_leads"),
+                "sf_opportunities": m.get("sf_opportunities"),
+                "salesforce_attribution_method": m.get("salesforce_attribution_method"),
+            }
 
-    Repeat this full block for every campaign_id, all in one email, in
-    the order the campaigns were given, preserving this exact section
-    order. No other fields, and no growth_assessment_result data
-    (recommendation, forecasted_roi, budget_recommendations), belong in
-    this email.
+    campaigns_full = []
+    for c in analysis_campaigns:
+        campaign_id = c.get("campaign_id")
+        campaigns_full.append({
+            "campaign_id": campaign_id,
+            "campaign_name": c.get("campaign_name"),
+            "platform": c.get("platform"),
+            "campaign_health": c.get("campaign_health"),
+            "efficiency_score": c.get("efficiency_score"),
+            "growth_potential": c.get("growth_potential"),
+            "high_intent_segments": c.get("high_intent_segments", []),
+            "performance_issues": c.get("performance_issues", []),
+            "recommended_action": c.get("recommended_action"),
+            "analysis_summary": c.get("analysis_summary"),
+            "latest_monthly_performance": latest_monthly_by_campaign_id.get(campaign_id),
+        })
 
-    report_email MUST come from session state — never invented or guessed.
-    """
+    report_data = {"campaigns_full": campaigns_full}
+
     subject = "Marketing Growth Campaign Action Report"
     body_html = f"""
     <html><body style="font-family:Arial,sans-serif;color:#243447">
       <h2>Marketing Growth — Campaign Action Report</h2>
-      {campaigns_summary_html}
+      {_report_email_html(report_data)}
     </body></html>
     """
     try:
         service = build_gmail_service()
         raw = _build_mime_email(report_email, subject, body_html)
         sent = service.users().messages().send(userId="me", body={"raw": raw}).execute()
-        return {
-            "status": "SENT", "type": "notify_report",
-            "report_email": report_email, "message_id": sent.get("id"),
-        }
+        return {"status": "SENT", "type": "notify_report", "report_email": report_email, "message_id": sent.get("id")}
     except Exception as e:
-        return {
-            "status": "ERROR", "type": "notify_report",
-            "report_email": report_email, "error_message": str(e),
-        }
-
+        return {"status": "ERROR", "type": "notify_report", "report_email": report_email, "error_message": str(e)}
 
 notify_manager_tool = FunctionTool(func=notify_manager)
 notify_report_tool = FunctionTool(func=notify_report)

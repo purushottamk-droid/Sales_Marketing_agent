@@ -69,6 +69,7 @@ async def run(data_path: Optional[str] = None) -> dict:
                     + json.dumps(state_delta["marketing_payload"], indent=2, default=str)
                 )
             if event.author == "decision_action_agent":
+                print(f"[decision_action_agent] finish_reason={getattr(event, 'finish_reason', None)} error={getattr(event, 'error_message', None)}")
                 if state_delta:
                     print(
                         "[decision_action_agent] state_delta: "

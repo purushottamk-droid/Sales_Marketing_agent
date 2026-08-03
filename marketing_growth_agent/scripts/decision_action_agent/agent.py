@@ -103,7 +103,7 @@
 
 
 from google.adk.agents import LlmAgent
-
+from google.genai import types
 from .prompt import ACTION_PROMPT
 from .tools import notify_manager_tool, notify_report_tool
 
@@ -114,4 +114,7 @@ decision_action_agent = LlmAgent(
     tools=[notify_manager_tool, notify_report_tool],
     output_key="decision_action_results",
     include_contents="none",
+    generate_content_config=types.GenerateContentConfig(
+        max_output_tokens=65536,
+    ),
 )
