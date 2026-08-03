@@ -1,9 +1,0 @@
-google-adk>=1.0,<2
-google-cloud-bigquery
-pydantic>=2
-python-dotenv
-mcp>=1.27,<2
-google-api-python-client>=2,<3
-google-auth-oauthlib>=1,<2
-fastapi
-uvicorn[standard]
