@@ -38,6 +38,7 @@ api.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://localhost:3000",
+        "https://sales-conversion-agent-final.web.app",
     ],  # Update with your frontend URLs in production
     allow_credentials=True,
     allow_methods=["*"],
