@@ -538,7 +538,7 @@ class MarketingDataCollectionAgent(BaseAgent):
             return
 
         lookback_days = int(ctx.session.state.get(
-            "lookback_days", os.getenv("MARKETING_LOOKBACK_DAYS", "365")
+            "lookback_days", os.getenv("MARKETING_LOOKBACK_DAYS", "90")
         ))
         if lookback_days < 1 or lookback_days > 730:
             raise ValueError("lookback_days must be between 1 and 730")
@@ -620,3 +620,4 @@ class MarketingDataCollectionAgent(BaseAgent):
 
 # Backward-compatible name used by SequentialAgent.py.
 DataCollectionAgent = MarketingDataCollectionAgent
+

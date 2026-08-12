@@ -288,3 +288,5 @@ async def fetch_salesforce_funnel(
 ) -> List[Dict[str, Any]]:
     """Backward-compatible funnel-only interface."""
     return (await fetch_salesforce_data(lookback_days, limit))["funnel"]
+
+
